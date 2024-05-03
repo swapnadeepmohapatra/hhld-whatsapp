@@ -1,4 +1,4 @@
-import Conversation from "../models/chat.model.js";
+import Conversation from "../model/chat.model.js";
 
 export const addMsgToConversation = async (participants, msg) => {
   try {
@@ -16,5 +16,26 @@ export const addMsgToConversation = async (participants, msg) => {
     await conversation.save();
   } catch (error) {
     console.log("Error adding message to conversation: " + error.message);
+  }
+};
+
+export const getMsgsForConversation = async (req, res) => {
+  try {
+    const { sender, receiver } = req.query;
+    console.log(sender + receiver);
+    const participants = [sender, receiver];
+    // Find conversation by participants
+    const conversation = await Conversation.findOne({
+      users: { $all: participants },
+    });
+    if (!conversation) {
+      console.log("Conversation not found");
+      return res.status(200).send();
+    }
+    console.log(conversation.msgs);
+    return res.json(conversation.msgs);
+  } catch (error) {
+    console.log("Error fetching messages:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };

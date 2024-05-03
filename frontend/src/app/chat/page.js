@@ -1,11 +1,12 @@
 "use client";
-import { useAuthStore } from "@/zustand/useAuthStore";
 import React, { useState, useEffect } from "react";
 import io from "socket.io-client";
 import axios from "axios";
-import { useUsersStore } from "@/zustand/useUsersStore";
 import ChatUsers from "@/_components/chatUsers";
+import { useUsersStore } from "@/zustand/useUsersStore";
+import { useAuthStore } from "@/zustand/useAuthStore";
 import { useChatReceiverStore } from "@/zustand/useChatReceiverStore";
+import { useChatMsgsStore } from "@/zustand/useChatMsgsStore";
 
 const Chat = () => {
   const [msgs, setMsgs] = useState([]);
@@ -13,7 +14,8 @@ const Chat = () => {
   const [socket, setSocket] = useState(null);
   const { authName } = useAuthStore();
   const { updateUsers } = useUsersStore();
-  const chatReceiver = useChatReceiverStore((state) => state.chatReceiver);
+  const { chatReceiver } = useChatReceiverStore();
+  const { chatMsgs, updateChatMsgs } = useChatMsgsStore();
 
   useEffect(() => {
     // Establish WebSocket connection
@@ -25,12 +27,9 @@ const Chat = () => {
     setSocket(newSocket);
 
     // Listen for incoming msgs
-    newSocket.on("chat msg", (msgrecv) => {
-      console.log("received msg on client " + msgrecv);
-      setMsgs((prevMsgs) => [
-        ...prevMsgs,
-        { text: msgrecv, sentByCurrUser: false },
-      ]);
+    newSocket.on("chat msg", (msg) => {
+      console.log("received msg on client " + msg.text);
+      updateChatMsgs([...chatMsgs, msg]);
     });
 
     getUserData();
@@ -50,7 +49,7 @@ const Chat = () => {
 
     if (socket) {
       socket.emit("chat msg", msgToBeSent);
-      setMsgs((prevMsgs) => [...prevMsgs, { text: msg, sentByCurrUser: true }]);
+      updateChatMsgs([...chatMsgs, msgToBeSent]);
       setMsg("");
     }
   };
@@ -69,19 +68,19 @@ const Chat = () => {
       </div>
       <div className="h-screen flex flex-col w-4/5">
         <div className="msgs-container h-4/5 overflow-scroll w-1/2 justify-self-center self-center">
-          <h1>
+          <h1 className="text-center">
             {authName} Chatting with {chatReceiver}
           </h1>
-          {msgs.map((msg, index) => (
+          {chatMsgs.map((msg, index) => (
             <div
               key={index}
               className={` m-3 my-8 ${
-                msg.sentByCurrUser ? "text-right" : "text-left"
+                msg.sender === authName ? "text-right" : "text-left"
               } text-black`}
             >
               <span
                 className={`${
-                  msg.sentByCurrUser ? "bg-red-200" : "bg-green-200"
+                  msg.sender === authName ? "bg-red-200" : "bg-green-200"
                 } p-3 rounded-lg`}
               >
                 {msg.text}
